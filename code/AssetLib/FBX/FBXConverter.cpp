@@ -1532,7 +1532,9 @@ void FBXConverter::ConvertWeights(aiMesh *out, const MeshGeometry &geo, const ai
                 const unsigned int *const out_idx = geo.ToOutputVertexIndex(index, count);
                 // ToOutputVertexIndex only returns nullptr if index is out of bounds
                 // which should never happen
-                ai_assert(out_idx != nullptr);
+                if (!out_idx) {
+                    continue;
+                }
 
                 index_out_indices.push_back(no_index_sentinel);
                 count_out_indices.push_back(0);
