@@ -469,9 +469,12 @@ IF( ASSIMP_BUILD_DOCS )
   ADD_SUBDIRECTORY(doc)
 ENDIF()
 
-# Search for external dependencies, and build them from source if not found
-# Search for zlib
-IF(ASSIMP_HUNTER_ENABLED)
+ #Search for external dependencies, and build them from source if not found
+ #Search for zlib
+if (ZLIB_INCLUDE_DIR)
+  add_definitions(-DASSIMP_BUILD_NO_OWN_ZLIB)
+  INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR})
+elseif(ASSIMP_HUNTER_ENABLED)
   hunter_add_package(ZLIB)
   find_package(ZLIB CONFIG REQUIRED)
 
