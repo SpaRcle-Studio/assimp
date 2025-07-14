@@ -1180,6 +1180,11 @@ IF (ASSIMP_BUILD_DRACO)
   ADD_DEFINITIONS( -DASSIMP_ENABLE_DRACO )
 ENDIF()
 
+if (DEFINED ASSIMP_SOURCES_MODIFY_HOOK)
+  cmake_language(CALL ${ASSIMP_SOURCES_MODIFY_HOOK} "${assimp_src}")
+  set(assimp_src ${assimp_src_updated})
+endif()
+
 ADD_LIBRARY( assimp ${assimp_src} )
 ADD_LIBRARY(assimp::assimp ALIAS assimp)
 
