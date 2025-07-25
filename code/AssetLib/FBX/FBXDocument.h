@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2022, assimp team
+Copyright (c) 2006-2025, assimp team
 
 All rights reserved.
 
@@ -55,8 +55,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _AI_CONCAT(a,b)  a ## b
 #define  AI_CONCAT(a,b)  _AI_CONCAT(a,b)
 
+
 namespace Assimp {
 namespace FBX {
+
+// Use an 'illegal' default FOV value to detect if the FBX camera has set the FOV.
+static const float kFovUnknown = -1.0f;
+
 
 class Parser;
 class Object;
@@ -81,6 +86,10 @@ class BlendShape;
 class Skin;
 class Cluster;
 
+#define new_LazyObject new (allocator.Allocate(sizeof(LazyObject))) LazyObject
+#define new_Connection new (allocator.Allocate(sizeof(Connection))) Connection
+#define delete_LazyObject(_p) (_p)->~LazyObject()
+#define delete_Connection(_p) (_p)->~Connection()
 
 /** Represents a delay-parsed FBX objects. Many objects in the scene
  *  are not needed by assimp, so it makes no sense to parse them
@@ -243,7 +252,7 @@ public:
     fbx_simple_property(FilmAspectRatio, float, 1.0f)
     fbx_simple_property(ApertureMode, int, 0)
 
-    fbx_simple_property(FieldOfView, float, 1.0f)
+    fbx_simple_property(FieldOfView, float, kFovUnknown)
     fbx_simple_property(FocalLength, float, 1.0f)
 };
 
@@ -648,11 +657,11 @@ private:
 };
 
 /** DOM class for generic FBX materials */
-class Material : public Object {
+class Material final : public Object {
 public:
     Material(uint64_t id, const Element& element, const Document& doc, const std::string& name);
 
-    virtual ~Material();
+    ~Material() override = default;
 
     const std::string& GetShadingModel() const {
         return shading;
@@ -826,7 +835,7 @@ private:
 class Deformer : public Object {
 public:
     Deformer(uint64_t id, const Element& element, const Document& doc, const std::string& name);
-    virtual ~Deformer();
+    virtual ~Deformer() = default;
 
     const PropertyTable& Props() const {
         ai_assert(props.get());
@@ -846,7 +855,7 @@ class BlendShapeChannel : public Deformer {
 public:
     BlendShapeChannel(uint64_t id, const Element& element, const Document& doc, const std::string& name);
 
-    virtual ~BlendShapeChannel();
+    virtual ~BlendShapeChannel() = default;
 
     float DeformPercent() const {
         return percent;
@@ -871,7 +880,7 @@ class BlendShape : public Deformer {
 public:
     BlendShape(uint64_t id, const Element& element, const Document& doc, const std::string& name);
 
-    virtual ~BlendShape();
+    virtual ~BlendShape() = default;
 
     const std::unordered_set<const BlendShapeChannel*>& BlendShapeChannels() const {
         return blendShapeChannels;
@@ -886,7 +895,7 @@ class Cluster : public Deformer {
 public:
     Cluster(uint64_t id, const Element& element, const Document& doc, const std::string& name);
 
-    virtual ~Cluster();
+    virtual ~Cluster() = default;
 
     /** get the list of deformer weights associated with this cluster.
      *  Use #GetIndices() to get the associated vertices. Both arrays
@@ -930,7 +939,7 @@ class Skin : public Deformer {
 public:
     Skin(uint64_t id, const Element& element, const Document& doc, const std::string& name);
 
-    virtual ~Skin();
+    virtual ~Skin() = default;
 
     float DeformAccuracy() const {
         return accuracy;
@@ -1073,7 +1082,7 @@ private:
 /** DOM root for a FBX file */
 class Document {
 public:
-    Document(const Parser& parser, const ImportSettings& settings);
+    Document(Parser& parser, const ImportSettings& settings);
 
     ~Document();
 
@@ -1157,7 +1166,7 @@ private:
     const ImportSettings& settings;
 
     ObjectMap objects;
-    const Parser& parser;
+    Parser& parser;
 
     PropertyTemplateMap templates;
     ConnectionMap src_connections;

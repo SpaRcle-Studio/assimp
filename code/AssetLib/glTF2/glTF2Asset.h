@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2022, assimp team
+Copyright (c) 2006-2025, assimp team
 
 All rights reserved.
 
@@ -44,6 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * glTF Extensions Support:
  *   KHR_materials_pbrSpecularGlossiness full
+ *   KHR_materials_specular full
  *   KHR_materials_unlit full
  *   KHR_lights_punctual full
  *   KHR_materials_sheen full
@@ -52,6 +53,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *   KHR_materials_volume full
  *   KHR_materials_ior full
  *   KHR_materials_emissive_strength full
+ *   KHR_materials_anisotropy full
  */
 #ifndef GLTF2ASSET_H_INC
 #define GLTF2ASSET_H_INC
@@ -117,7 +119,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/material.h>
 #include <assimp/GltfMaterial.h>
 
-#include "AssetLib/glTF/glTFCommon.h"
+#include "AssetLib/glTFCommon/glTFCommon.h"
 
 namespace glTF2 {
 
@@ -370,6 +372,15 @@ struct CustomExtension {
     CustomExtension& operator=(const CustomExtension&) = default;
 };
 
+//! Represents metadata in an glTF2 object
+struct Extras {
+    std::vector<CustomExtension> mValues;
+
+    inline bool HasExtras() const {
+        return !mValues.empty();
+    }
+};
+
 //! Base class for all glTF top-level objects
 struct Object {
     int index; //!< The index of this object within its property container
@@ -378,7 +389,7 @@ struct Object {
     std::string name; //!< The user-defined name of this object
 
     CustomExtension customExtensions;
-    CustomExtension extras;
+    Extras extras;
 
     //! Objects marked as special are not exported (used to emulate the binary body buffer)
     virtual bool IsSpecial() const { return false; }
@@ -537,7 +548,7 @@ struct BufferView : public Object {
     BufferViewTarget target; //! The target that the WebGL buffer should be bound to.
 
     void Read(Value &obj, Asset &r);
-    uint8_t *GetPointer(size_t accOffset);
+    uint8_t *GetPointerAndTailSize(size_t accOffset, size_t& outTailSize);
 };
 
 //! A typed view into a BufferView. A BufferView contains raw binary data.
@@ -619,7 +630,7 @@ struct Accessor : public Object {
 
         std::vector<uint8_t> data; //!< Actual data, which may be defaulted to an array of zeros or the original data, with the sparse buffer view applied on top of it.
 
-        void PopulateData(size_t numBytes, uint8_t *bytes);
+        void PopulateData(size_t numBytes, const uint8_t *bytes);
         void PatchData(unsigned int elementSize);
     };
 };
@@ -710,6 +721,7 @@ const vec4 defaultBaseColor = { 1, 1, 1, 1 };
 const vec3 defaultEmissiveFactor = { 0, 0, 0 };
 const vec4 defaultDiffuseFactor = { 1, 1, 1, 1 };
 const vec3 defaultSpecularFactor = { 1, 1, 1 };
+const vec3 defaultSpecularColorFactor = { 1, 1, 1 };
 const vec3 defaultSheenFactor = { 0, 0, 0 };
 const vec3 defaultAttenuationColor = { 1, 1, 1 };
 
@@ -750,6 +762,16 @@ struct PbrSpecularGlossiness {
     TextureInfo specularGlossinessTexture;
 
     PbrSpecularGlossiness() { SetDefaults(); }
+    void SetDefaults();
+};
+
+struct MaterialSpecular {
+    float specularFactor;
+    vec3 specularColorFactor;
+    TextureInfo specularTexture;
+    TextureInfo specularColorTexture;
+
+    MaterialSpecular() { SetDefaults(); }
     void SetDefaults();
 };
 
@@ -800,6 +822,15 @@ struct MaterialEmissiveStrength {
     void SetDefaults();
 };
 
+struct MaterialAnisotropy {
+    float anisotropyStrength = 0.f;
+    float anisotropyRotation = 0.f;
+    TextureInfo anisotropyTexture;
+
+    MaterialAnisotropy() { SetDefaults(); }
+    void SetDefaults();
+};
+
 //! The material appearance of a primitive.
 struct Material : public Object {
     //PBR metallic roughness properties
@@ -816,6 +847,9 @@ struct Material : public Object {
 
     //extension: KHR_materials_pbrSpecularGlossiness
     Nullable<PbrSpecularGlossiness> pbrSpecularGlossiness;
+
+    //extension: KHR_materials_specular
+    Nullable<MaterialSpecular> materialSpecular;
 
     //extension: KHR_materials_sheen
     Nullable<MaterialSheen> materialSheen;
@@ -834,6 +868,9 @@ struct Material : public Object {
 
     //extension: KHR_materials_emissive_strength
     Nullable<MaterialEmissiveStrength> materialEmissiveStrength;
+
+    //extension: KHR_materials_anisotropy
+    Nullable<MaterialAnisotropy> materialAnisotropy;
 
     //extension: KHR_materials_unlit
     bool unlit;
@@ -1099,6 +1136,7 @@ public:
     //! Keeps info about the enabled extensions
     struct Extensions {
         bool KHR_materials_pbrSpecularGlossiness;
+        bool KHR_materials_specular;
         bool KHR_materials_unlit;
         bool KHR_lights_punctual;
         bool KHR_texture_transform;
@@ -1108,12 +1146,14 @@ public:
         bool KHR_materials_volume;
         bool KHR_materials_ior;
         bool KHR_materials_emissive_strength;
+        bool KHR_materials_anisotropy;
         bool KHR_draco_mesh_compression;
         bool FB_ngon_encoding;
         bool KHR_texture_basisu;
 
         Extensions() :
                 KHR_materials_pbrSpecularGlossiness(false),
+                KHR_materials_specular(false),
                 KHR_materials_unlit(false),
                 KHR_lights_punctual(false),
                 KHR_texture_transform(false),
@@ -1123,6 +1163,7 @@ public:
                 KHR_materials_volume(false),
                 KHR_materials_ior(false),
                 KHR_materials_emissive_strength(false),
+                KHR_materials_anisotropy(false),
                 KHR_draco_mesh_compression(false),
                 FB_ngon_encoding(false),
                 KHR_texture_basisu(false) {
@@ -1226,6 +1267,7 @@ private:
     size_t mBodyOffset;
     size_t mBodyLength;
     IdMap mUsedIds;
+    std::map<std::string, int, std::less<>> mUsedNamesMap;
     Ref<Buffer> mBodyBuffer;
 };
 
