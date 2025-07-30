@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2023, assimp team
+Copyright (c) 2006-2025, assimp team
 
 All rights reserved.
 
@@ -53,7 +53,8 @@ namespace Assimp {
 
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
-LimitBoneWeightsProcess::LimitBoneWeightsProcess() : mMaxWeights(AI_LMW_MAX_WEIGHTS) {
+LimitBoneWeightsProcess::LimitBoneWeightsProcess() :
+        mMaxWeights(AI_LMW_MAX_WEIGHTS), mRemoveEmptyBones(true) {
     // empty
 }
 
@@ -67,7 +68,7 @@ bool LimitBoneWeightsProcess::IsActive( unsigned int pFlags) const {
 // Executes the post processing step on the given imported data.
 void LimitBoneWeightsProcess::Execute( aiScene* pScene) {
     ai_assert(pScene != nullptr);
-              
+
     ASSIMP_LOG_DEBUG("LimitBoneWeightsProcess begin");
 
     for (unsigned int m = 0; m < pScene->mNumMeshes; ++m) {
@@ -81,12 +82,13 @@ void LimitBoneWeightsProcess::Execute( aiScene* pScene) {
 // Executes the post processing step on the given imported data.
 void LimitBoneWeightsProcess::SetupProperties(const Importer* pImp) {
     this->mMaxWeights = pImp->GetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS,AI_LMW_MAX_WEIGHTS);
+    this->mRemoveEmptyBones = pImp->GetPropertyInteger(AI_CONFIG_IMPORT_REMOVE_EMPTY_BONES, 1) != 0;
 }
 
 // ------------------------------------------------------------------------------------------------
 static unsigned int removeEmptyBones(aiMesh *pMesh) {
     ai_assert(pMesh != nullptr);
-    
+
     unsigned int writeBone = 0;
     for (unsigned int readBone = 0; readBone< pMesh->mNumBones; ++readBone) {
         aiBone* bone = pMesh->mBones[readBone];
@@ -96,7 +98,7 @@ static unsigned int removeEmptyBones(aiMesh *pMesh) {
             delete bone;
         }
     }
-    
+
     return writeBone;
 }
 
@@ -172,9 +174,9 @@ void LimitBoneWeightsProcess::ProcessMesh(aiMesh* pMesh) {
     }
 
     // remove empty bones
-#ifdef AI_CONFIG_IMPORT_REMOVE_EMPTY_BONES 
-    pMesh->mNumBones = removeEmptyBones(pMesh);
-#endif // AI_CONFIG_IMPORT_REMOVE_EMPTY_BONES 
+    if (mRemoveEmptyBones) {
+        pMesh->mNumBones = removeEmptyBones(pMesh);
+    }
 
     if (!DefaultLogger::isNullLogger()) {
         ASSIMP_LOG_INFO("Removed ", removed, " weights. Input bones: ", old_bones, ". Output bones: ", pMesh->mNumBones);

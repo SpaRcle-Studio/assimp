@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2022, assimp team
+Copyright (c) 2006-2025, assimp team
 
 All rights reserved.
 
@@ -57,6 +57,7 @@ enum class ResourceType {
     RT_BaseMaterials,
     RT_EmbeddedTexture2D,
     RT_Texture2DGroup,
+    RT_ColorGroup,
     RT_Unknown
 }; // To be extended with other resource types (eg. material extension resources like Texture2d, Texture2dGroup...)
 
@@ -117,6 +118,21 @@ public:
     }
 };
 
+class ColorGroup : public Resource {
+public:
+    std::vector<aiColor4D> mColors;
+    ColorGroup(int id) :
+            Resource(id){
+        // empty
+    }
+
+    ~ColorGroup() override = default;
+
+    ResourceType getType() const override {
+        return ResourceType::RT_ColorGroup;
+    }
+};
+
 class BaseMaterials : public Resource {
 public:
     std::vector<unsigned int> mMaterialIndex;
@@ -141,7 +157,7 @@ struct Component {
 
 class Object : public Resource {
 public:
-    std::vector<aiMesh *> mMeshes;
+    MeshArray mMeshes;
     std::vector<unsigned int> mMeshIndex;
     std::vector<Component> mComponents;
     std::string mName;
