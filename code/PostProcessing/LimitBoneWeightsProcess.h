@@ -2,8 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2022, assimp team
-
+Copyright (c) 2006-2025, assimp team
 
 All rights reserved.
 
@@ -133,6 +132,7 @@ public:
 
     /** Maximum number of bones influencing any single vertex. */
     unsigned int mMaxWeights;
+    bool mRemoveEmptyBones;
 };
 
 } // end of namespace Assimp
