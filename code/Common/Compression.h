@@ -41,10 +41,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#ifdef ASSIMP_BUILD_NO_OWN_ZLIB
-#   include <zlib.h>
-#else
-#   include "../contrib/zlib/zlib.h"
+#ifndef ASSIMP_BUILD_DISABLE_ZLIB
+	#ifdef ASSIMP_BUILD_NO_OWN_ZLIB
+	#   include <zlib.h>
+	#else
+	#   include "../contrib/zlib/zlib.h"
+	#endif
 #endif
 
 #include <vector>
@@ -55,7 +57,11 @@ namespace Assimp {
 /// @brief This class provides the decompression of zlib-compressed data.
 class Compression {
 public:
+#ifndef ASSIMP_BUILD_DISABLE_ZLIB
     static const int MaxWBits = MAX_WBITS;
+#else
+    static const int MaxWBits = 0;
+#endif
 
     /// @brief Describes the format data type
     enum class Format {

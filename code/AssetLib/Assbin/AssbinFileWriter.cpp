@@ -50,10 +50,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/version.h>
 #include <assimp/IOStream.hpp>
 
-#ifdef ASSIMP_BUILD_NO_OWN_ZLIB
-#include <zlib.h>
-#else
-#include "../contrib/zlib/zlib.h"
+#ifndef ASSIMP_BUILD_DISABLE_ZLIB
+    #ifdef ASSIMP_BUILD_NO_OWN_ZLIB
+    #include <zlib.h>
+    #else
+    #include "../contrib/zlib/zlib.h"
+    #endif
 #endif
 
 #include <ctime>
@@ -795,6 +797,7 @@ public:
             // Up to here the data is uncompressed. For compressed files, the rest
             // is compressed using standard DEFLATE from zlib.
             if (compressed) {
+            #ifndef ASSIMP_BUILD_DISABLE_ZLIB
                 AssbinChunkWriter uncompressedStream(nullptr, 0);
                 WriteBinaryScene(&uncompressedStream, pScene);
 
@@ -812,6 +815,7 @@ public:
                 out->Write(compressedBuffer, sizeof(char), compressedSize);
 
                 delete[] compressedBuffer;
+            #endif
             } else {
                 WriteBinaryScene(out, pScene);
             }

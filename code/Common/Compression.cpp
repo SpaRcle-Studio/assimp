@@ -47,12 +47,18 @@ namespace Assimp {
 
 struct Compression::impl {
     bool mOpen;
+
+#ifndef ASSIMP_BUILD_DISABLE_ZLIB
     z_stream mZSstream;
+#endif
+
     FlushMode mFlushMode;
 
     impl() :
             mOpen(false),
+#ifndef ASSIMP_BUILD_DISABLE_ZLIB
             mZSstream(),
+#endif
             mFlushMode(Compression::FlushMode::NoFlush) {
         // empty
     }
@@ -70,6 +76,7 @@ Compression::~Compression() {
 }
 
 bool Compression::open(Format format, FlushMode flush, int windowBits) {
+#ifndef ASSIMP_BUILD_DISABLE_ZLIB
     ai_assert(mImpl != nullptr);
 
     if (mImpl->mOpen) {
@@ -96,8 +103,15 @@ bool Compression::open(Format format, FlushMode flush, int windowBits) {
     mImpl->mOpen = true;
 
     return mImpl->mOpen;
+#else
+    (void(format));
+    (void(flush));
+    (void(windowBits));
+    return false;
+#endif
 }
 
+#ifndef ASSIMP_BUILD_DISABLE_ZLIB
 static int getFlushMode(Compression::FlushMode flush) {
     int z_flush = 0;
     switch (flush) {
@@ -120,9 +134,9 @@ static int getFlushMode(Compression::FlushMode flush) {
             ai_assert(false);
             break;
     }
-
     return z_flush;
 }
+#endif
 
 constexpr size_t MYBLOCK = 32786;
 
@@ -132,11 +146,13 @@ size_t Compression::decompress(const void *data, size_t in, std::vector<char> &u
         return 0l;
     }
 
+#ifndef ASSIMP_BUILD_DISABLE_ZLIB
     mImpl->mZSstream.next_in = (Bytef*)(data);
     mImpl->mZSstream.avail_in = (uInt)in;
 
     int ret = 0;
     size_t total = 0l;
+
     const int flushMode = getFlushMode(mImpl->mFlushMode);
     if (flushMode == Z_FINISH) {
         mImpl->mZSstream.avail_out = static_cast<uInt>(uncompressed.size());
@@ -164,8 +180,11 @@ size_t Compression::decompress(const void *data, size_t in, std::vector<char> &u
             ::memcpy(uncompressed.data() + total - have, block, have);
         } while (ret != Z_STREAM_END);
     }
-
     return total;
+#else
+    (void(uncompressed));
+    return 0l;
+#endif
 }
 
 size_t Compression::decompressBlock(const void *data, size_t in, char *out, size_t availableOut) {
@@ -174,6 +193,7 @@ size_t Compression::decompressBlock(const void *data, size_t in, char *out, size
         return 0l;
     }
 
+#ifndef ASSIMP_BUILD_DISABLE_ZLIB
     // push data to the stream
     mImpl->mZSstream.next_in = (Bytef *)data;
     mImpl->mZSstream.avail_in = (uInt)in;
@@ -190,6 +210,9 @@ size_t Compression::decompressBlock(const void *data, size_t in, char *out, size
     ::inflateSetDictionary(&mImpl->mZSstream, (const Bytef *)out, (uInt)availableOut - mImpl->mZSstream.avail_out);
 
     return availableOut - (size_t)mImpl->mZSstream.avail_out;
+#else
+    return 0;
+#endif
 }
 
 bool Compression::isOpen() const {
@@ -205,7 +228,10 @@ bool Compression::close() {
         return false;
     }
 
+#ifndef ASSIMP_BUILD_DISABLE_ZLIB
     inflateEnd(&mImpl->mZSstream);
+#endif
+
     mImpl->mOpen = false;
 
     return true;
